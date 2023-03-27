@@ -500,8 +500,8 @@ const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max 
  * @notice Given a Tenderly contract object, generates a descriptive human-friendly name for that contract
  * @param contract Tenderly contract object to generate name from
  */
-export function getContractName(contract: TenderlyContract | undefined) {
-  if (!contract) return 'unknown contract name'
+export function getContractName(contract: TenderlyContract | undefined, defaultName='unknown contract name') {
+  if (!contract) return defaultName
   let contractName = contract?.contract_name
 
   // If the contract is a token, include the full token name. This is useful in cases where the
