@@ -62,7 +62,7 @@ function selectorFromSig(sig: string): string {
  */
 function findMatchingCall(from: string, calldata: string, calls: any[]): FluffyCall | null {
   from = getAddress(from)
-  const callMatches = (f: string, c: string) => getAddress(f) === from && c === calldata
+  const callMatches = (f: string, c: string) => c === calldata
   for (const call of calls) {
     if (callMatches(call.from, call.input)) return call
     if (call.calls) {
