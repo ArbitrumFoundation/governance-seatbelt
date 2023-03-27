@@ -46,7 +46,7 @@ export function blockQuote(str: string): string {
  * @param code whether to link to the code tab
  */
 export function toAddressLink(address: string, code: boolean = false): string {
-  return `[\`${address}\`](https://etherscan.io/address/${address}${code ? '#code' : ''})`
+  return `[\`${address}\`](https://arbiscan.io/address/${address}${code ? '#code' : ''})`
 }
 
 // -- Report formatters ---
@@ -170,7 +170,7 @@ async function toMarkdownProposalReport(
   const report = `
 # ${getProposalTitle(description.trim())}
 
-_Updated as of block [${blocks.current.number}](https://etherscan.io/block/${blocks.current.number}) at ${formatTime(
+_Updated as of block [${blocks.current.number}](https://arbiscan.io/block/${blocks.current.number}) at ${formatTime(
     blocks.current.timestamp
   )}_
 
