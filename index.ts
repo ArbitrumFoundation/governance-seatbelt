@@ -8,7 +8,7 @@ import { BigNumber, Contract } from 'ethers'
 import { DAO_NAME, GOVERNOR_ADDRESS, SIM_NAME } from './utils/constants'
 import { provider } from './utils/clients/ethers'
 import { simulate } from './utils/clients/tenderly'
-import { AllCheckResults, GovernorType, SimulationConfig, SimulationConfigBase, SimulationData } from './types'
+import { AllCheckResults, GovernorType, SimulationConfig, SimulationConfigBase, SimulationConfigCrosschain, SimulationData, SimulationResult, SimulationConfigRetryable } from './types'
 import ALL_CHECKS from './checks'
 import { generateAndSaveReports } from './presentation/report'
 import { PROPOSAL_STATES } from './utils/contracts/governor-bravo'
@@ -20,6 +20,97 @@ import {
   inferGovernorType,
 } from './utils/contracts/governor'
 import { getAddress } from '@ethersproject/address'
+import { SubmitRetryableMessageDataParser } from '@arbitrum/sdk/dist/lib/message/messageDataParser'
+import { Inbox__factory  } from '@arbitrum/sdk/dist/lib/abi/factories/Inbox__factory'
+import { Bridge__factory } from '@arbitrum/sdk/dist/lib/abi/factories/Bridge__factory'
+import { ArbSys__factory } from '@arbitrum/sdk/dist/lib/abi/factories/ArbSys__factory'
+import { EventArgs, parseTypedLogs } from '@arbitrum/sdk/dist/lib/dataEntities/event'
+import { InboxMessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Inbox'
+import { MessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Bridge'
+import { InboxMessageKind } from '@arbitrum/sdk/dist/lib/dataEntities/message'
+
+async function simL2toL1(sr: SimulationResult, simname:string){
+  const { proposal, sim} = sr
+  const parentId = proposal.id!
+
+  const rawlog = sim.transaction.transaction_info.logs?.map(l=>l.raw)
+  const L2ToL1TxEvents = parseTypedLogs(ArbSys__factory, rawlog as any, 'L2ToL1Tx')
+
+  if(L2ToL1TxEvents.length > 1){
+    throw new Error("More than one L2ToL1TxEvents found")
+  }
+  for (const l2ToL1TxEvent of L2ToL1TxEvents) {
+    const l2tol1config: SimulationConfigCrosschain = {
+      type: 'crosschain',
+      daoName: simname,
+      governorType: 'arb',
+      governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
+      targets: [l2ToL1TxEvent.destination], // Array of targets to call.
+      values: [l2ToL1TxEvent.callvalue], // Array of values with each call.
+      signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
+      calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
+      description: 'The is the L1 Timelock Execution of proposal ' + parentId.toHexString(),
+      parentId: parentId
+    }
+    const { sim, proposal, latestBlock } = await simulate(l2tol1config)
+    return { sim, proposal, latestBlock, config: l2tol1config }
+  }
+}
+
+async function simRetryable(sr: SimulationResult, simname:string){
+  const { proposal, sim} = sr
+  const parentId = proposal.id!
+
+  const rawlog = sim.transaction.transaction_info.logs?.map(l=>l.raw)
+  const bridgeMessages = parseTypedLogs(Bridge__factory, rawlog as any, 'MessageDelivered')
+  const inboxMessages = parseTypedLogs(Inbox__factory, rawlog as any, 'InboxMessageDelivered(uint256,bytes)')
+  if (bridgeMessages.length !== inboxMessages.length) {
+    throw new Error('Unexpected number of message delivered events')
+  }
+  const messages: {
+    inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
+    bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
+  }[] = []
+  for (const bm of bridgeMessages) {
+    const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
+    if (!im) {
+      throw new Error(
+        `Unexepected missing event for message index: ${bm.messageIndex.toString()}. ${JSON.stringify(
+          inboxMessages
+        )}`
+      )
+    }
+    messages.push({
+      inboxMessageEvent: im,
+      bridgeMessageEvent: bm,
+    })
+  }
+  for (const {inboxMessageEvent, bridgeMessageEvent} of messages) {
+
+    if (bridgeMessageEvent.kind === InboxMessageKind.L1MessageType_submitRetryableTx) {
+
+      const parser = new SubmitRetryableMessageDataParser()
+      const parsedRetryable = parser.parse(inboxMessageEvent.data)
+
+      const l2tol1config: SimulationConfigRetryable = {
+        type: 'retryable',
+        from: bridgeMessageEvent.sender,
+        daoName: simname,
+        governorType: 'arb',
+        governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
+        targets: [parsedRetryable.destAddress], // Array of targets to call.
+        values: [parsedRetryable.l2CallValue], // Array of values with each call.
+        signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
+        calldatas: [parsedRetryable.data], // Array of encoded calldatas.
+        description: 'The is the L2 Retryable Execution of proposal ' + parentId.sub(1).toHexString(),
+        parentId: parentId
+      }
+      console.log(l2tol1config)
+      const { sim, proposal, latestBlock } = await simulate(l2tol1config)
+      return { sim, proposal, latestBlock, config: l2tol1config }
+    }
+  }
+}
 
 /**
  * @notice Simulate governance proposals and run proposal checks against them
@@ -40,6 +131,16 @@ async function main() {
 
     const { sim, proposal, latestBlock } = await simulate(config)
     simOutputs.push({ sim, proposal, latestBlock, config })
+
+    if ((config.type === 'new' || config.type === 'proposed') && config.governorType === 'arb') {
+      const l2tol1sim = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
+      simOutputs.push(l2tol1sim!)
+      const retryablesim = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
+      simOutputs.push(retryablesim!)
+    } else if (config.type === 'crosschain' && config.governorType === 'arb') {
+      const retryablesim = await simRetryable({ sim, proposal, latestBlock }, config.daoName)
+      simOutputs.push(retryablesim!)
+    }
 
     governorType = await inferGovernorType(config.governorAddress)
     governor = await getGovernor(governorType, config.governorAddress)

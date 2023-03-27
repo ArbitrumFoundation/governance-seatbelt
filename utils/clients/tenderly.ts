@@ -5,8 +5,7 @@ import { hexStripZeros } from '@ethersproject/bytes'
 import { HashZero, Zero } from '@ethersproject/constants'
 import { keccak256 } from '@ethersproject/keccak256'
 import { toUtf8Bytes } from '@ethersproject/strings'
-import { parseEther } from '@ethersproject/units'
-import { provider } from './ethers'
+import { l1provider, provider } from './ethers'
 import mftch, { FETCH_OPT } from 'micro-ftch'
 // @ts-ignore
 const fetchUrl = mftch.default
@@ -34,13 +33,16 @@ import {
   SimulationConfigExecuted,
   SimulationConfigNew,
   SimulationConfigProposed,
+  SimulationConfigCrosschain,
   SimulationResult,
   StorageEncodingResponse,
   TenderlyContract,
   TenderlyPayload,
   TenderlySimulation,
+  SimulationConfigRetryable,
 } from '../../types'
 import { writeFileSync } from 'fs'
+import { Interface } from 'ethers/lib/utils'
 
 const TENDERLY_FETCH_OPTIONS = { type: 'json', headers: { 'X-Access-Key': TENDERLY_ACCESS_TOKEN } }
 const DEFAULT_FROM = '0xD73a92Be73EfbFcF3854433A5FcbAbF9c1316073' // arbitrary EOA not used on-chain
@@ -54,7 +56,10 @@ const DEFAULT_FROM = '0xD73a92Be73EfbFcF3854433A5FcbAbF9c1316073' // arbitrary E
 export async function simulate(config: SimulationConfig) {
   if (config.type === 'executed') return await simulateExecuted(config)
   else if (config.type === 'proposed') return await simulateProposed(config)
-  else return await simulateNew(config)
+  else if (config.type === 'new') return await simulateNew(config)
+  else if (config.type === 'crosschain') return await simulateCrosschain(config)
+  else if (config.type === 'retryable') return await simulateRetryable(config)
+  throw new Error('Invalid simulation type')
 }
 
 /**
@@ -237,8 +242,8 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
     gas: BLOCK_GAS_LIMIT,
     gas_price: '0',
     value: '0', // TODO Support sending ETH in local simulations like we do below in `simulateProposed`.
-    save_if_fails: false, // Set to true to save the simulation to your Tenderly dashboard if it fails.
-    save: false, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
+    save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
+    save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
     generate_access_list: true, // not required, but useful as a sanity check to ensure consistency in the simulation response
     block_header: {
       // this data represents what block.number and block.timestamp should return in the EVM during the simulation
@@ -418,8 +423,8 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
     gas: BLOCK_GAS_LIMIT,
     gas_price: '0',
     value: '0',
-    save_if_fails: false, // Set to true to save the simulation to your Tenderly dashboard if it fails.
-    save: false, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
+    save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
+    save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
     generate_access_list: true, // not required, but useful as a sanity check to ensure consistency in the simulation response
     block_header: {
       // this data represents what block.number and block.timestamp should return in the EVM during the simulation
@@ -506,8 +511,8 @@ async function simulateExecuted(config: SimulationConfigExecuted): Promise<Simul
     gas: tx.gasLimit.toNumber(),
     gas_price: tx.gasPrice?.toString(),
     value: tx.value.toString(),
-    save_if_fails: false, // Set to true to save the simulation to your Tenderly dashboard if it fails.
-    save: false, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
+    save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
+    save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
     generate_access_list: true,
   }
   const sim = await sendSimulation(simulationPayload)
@@ -517,6 +522,182 @@ async function simulateExecuted(config: SimulationConfigExecuted): Promise<Simul
     id: BigNumber.from(proposalId), // Make sure we always have an ID field
   }
   return { sim, proposal: formattedProposal, latestBlock }
+}
+
+async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<SimulationResult> {
+  // --- Validate config ---
+  const { governorType, targets, values, calldatas, description, signatures, parentId } = config
+  if (targets.length !== 1) throw new Error('targets must be length 1')
+  if (targets.length !== values.length) throw new Error('targets and values must be the same length')
+  if (targets.length !== calldatas.length) throw new Error('targets and calldatas must be the same length')
+
+  const timelock = targets[0]
+
+  // --- Get details about the proposal we're simulating ---
+  const network = await l1provider.getNetwork()
+  const blockNumberToUse = (await getLatestBlock(network.chainId)) - 3 // subtracting a few blocks to ensure tenderly has the block
+  const latestBlock = await l1provider.getBlock(blockNumberToUse)
+  // const governor = getGovernor(governorType, governorAddress)
+
+  const proposalId = BigNumber.from(parentId).add(1)
+
+  const startBlock = BigNumber.from(latestBlock.number - 100) // arbitrarily subtract 100
+  const endBlock = startBlock.add(1)
+
+  const proposal: ProposalEvent = {
+    id: proposalId, // Bravo governor
+    proposalId, // OZ governor (for simplicity we just include both ID formats)
+    proposer: DEFAULT_FROM,
+    startBlock,
+    endBlock,
+    description,
+    targets,
+    values: values.map(BigNumber.from),
+    signatures,
+    calldatas,
+  }
+
+  // Set `from` arbitrarily.
+  const from = DEFAULT_FROM
+
+  // Run simulation at the block right after the proposal ends.
+  const simBlock = endBlock.add(1)
+
+  const simTimestamp = BigNumber.from(latestBlock.timestamp + 1)
+  const eta = simTimestamp // set proposal eta to be equal to the timestamp we simulate at
+
+  // Compute transaction hashes used by the Timelock
+  const txHashes = targets.map((target, i) => {
+    const [val, sig, calldata] = [values[i], signatures[i], calldatas[i]]
+    return keccak256(
+      defaultAbiCoder.encode(['address', 'uint256', 'string', 'bytes', 'uint256'], [target, val, sig, calldata, eta])
+    )
+  })
+
+  // Generate the state object needed to mark the transactions as queued in the Timelock's storage
+  const timelockStorageObj: Record<string, string> = {}
+  txHashes.forEach((hash) => {
+    timelockStorageObj[`queuedTransactions[${hash}]`] = 'true'
+  })
+
+  if (governorType === 'oz' || governorType === 'arb') {
+    const ITimeLock = new Interface([
+      'function schedule(address target, uint256 value, bytes calldata data, bytes32 predecessor, bytes32 salt, uint256 delay) external',
+      'function execute(address target, uint256 value, bytes calldata data, bytes32 predecessor, bytes32 salt, uint256 delay) external'
+    ])
+    const args = ITimeLock.parseTransaction({data: calldatas[0]}).args
+    const id = hashOperationOz(args[0], args[1], args[2], args[3], args[4])
+    timelockStorageObj[`_timestamps[${id.toHexString()}]`] = simTimestamp.toString()
+  }
+  console.log(timelockStorageObj)
+
+  const stateOverrides = {
+    networkID: '1',
+    stateOverrides: {
+      [timelock]: {
+        value: timelockStorageObj,
+      },
+    },
+  }
+  const storageObj = await sendEncodeRequest(stateOverrides)
+
+  console.log(stateOverrides)
+  console.log(storageObj)
+
+  const simulationPayload: TenderlyPayload = {
+    network_id: '1',
+    // this field represents the block state to simulate against, so we use the latest block number
+    block_number: latestBlock.number,
+    from: DEFAULT_FROM,
+    to: timelock,
+    input: calldatas[0].replace('0x01d5062a', '0x134008d3'),
+    gas: BLOCK_GAS_LIMIT,
+    gas_price: '0',
+    value: "1000000000000000", // retryable submission cost TODO: don't hardcode this
+    save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
+    save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
+    generate_access_list: true, // not required, but useful as a sanity check to ensure consistency in the simulation response
+    block_header: {
+      // this data represents what block.number and block.timestamp should return in the EVM during the simulation
+      number: hexStripZeros(simBlock.toHexString()),
+      timestamp: hexStripZeros(simTimestamp.toHexString()),
+    },
+    state_objects: {
+      // Since gas price is zero, the sender needs no balance.
+      // TODO Support sending ETH in local simulations like we do below in `simulateProposed`.
+      [from]: { balance: '1000000000000000' },
+      // Ensure transactions are queued in the timelock
+      [timelock]: { storage: storageObj.stateOverrides[timelock.toLowerCase()].value },
+    },
+  }
+  const sim = await sendSimulation(simulationPayload)
+  return { sim, proposal, latestBlock }
+}
+
+async function simulateRetryable(config: SimulationConfigRetryable): Promise<SimulationResult> {
+  // --- Validate config ---
+  const { targets, values, calldatas, description, signatures, parentId, from } = config
+  if (targets.length !== 1) throw new Error('targets must be length 1')
+  if (targets.length !== values.length) throw new Error('targets and values must be the same length')
+  if (targets.length !== calldatas.length) throw new Error('targets and calldatas must be the same length')
+
+  const target = targets[0]
+
+  // --- Get details about the proposal we're simulating ---
+  const network = await provider.getNetwork()
+  const blockNumberToUse = (await getLatestBlock(network.chainId)) - 3 // subtracting a few blocks to ensure tenderly has the block
+  const latestBlock = await provider.getBlock(blockNumberToUse)
+  // const governor = getGovernor(governorType, governorAddress)
+
+  const proposalId = BigNumber.from(parentId).add(1)
+
+  const startBlock = BigNumber.from(latestBlock.number - 100) // arbitrarily subtract 100
+  const endBlock = startBlock.add(1)
+
+  const proposal: ProposalEvent = {
+    id: proposalId, // Bravo governor
+    proposalId, // OZ governor (for simplicity we just include both ID formats)
+    proposer: DEFAULT_FROM,
+    startBlock,
+    endBlock,
+    description,
+    targets,
+    values: values.map(BigNumber.from),
+    signatures,
+    calldatas,
+  }
+
+  // Run simulation at the block right after the proposal ends.
+  const simBlock = endBlock.add(1)
+
+  const simTimestamp = BigNumber.from(latestBlock.timestamp + 1)
+
+  const simulationPayload: TenderlyPayload = {
+    network_id: '42161',
+    // this field represents the block state to simulate against, so we use the latest block number
+    block_number: latestBlock.number,
+    from: from,
+    to: target,
+    input: calldatas[0],
+    gas: BLOCK_GAS_LIMIT,
+    gas_price: '0',
+    value: "0", // retryable submission cost TODO: don't hardcode this
+    save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
+    save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
+    generate_access_list: true, // not required, but useful as a sanity check to ensure consistency in the simulation response
+    block_header: {
+      // this data represents what block.number and block.timestamp should return in the EVM during the simulation
+      number: hexStripZeros(simBlock.toHexString()),
+      timestamp: hexStripZeros(simTimestamp.toHexString()),
+    },
+    state_objects: {
+      // Since gas price is zero, the sender needs no balance.
+      // TODO Support sending ETH in local simulations like we do below in `simulateProposed`.
+      [from]: { balance: '0' },
+    },
+  }
+  const sim = await sendSimulation(simulationPayload)
+  return { sim, proposal, latestBlock }
 }
 
 // --- Helper methods ---

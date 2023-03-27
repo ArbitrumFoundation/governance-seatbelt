@@ -32,7 +32,28 @@ export interface SimulationConfigNew extends SimulationConfigBase {
   description: string
 }
 
-export type SimulationConfig = SimulationConfigExecuted | SimulationConfigProposed | SimulationConfigNew
+export interface SimulationConfigCrosschain extends SimulationConfigBase {
+  type: 'crosschain'
+  targets: string[]
+  values: BigNumberish[]
+  signatures: string[]
+  calldatas: string[]
+  description: string
+  parentId: BigNumberish
+}
+
+export interface SimulationConfigRetryable extends SimulationConfigBase {
+  type: 'retryable'
+  targets: string[]
+  values: BigNumberish[]
+  signatures: string[]
+  calldatas: string[]
+  description: string
+  parentId: BigNumberish
+  from: string
+}
+
+export type SimulationConfig = SimulationConfigExecuted | SimulationConfigProposed | SimulationConfigNew | SimulationConfigCrosschain | SimulationConfigRetryable
 
 export interface SimulationResult {
   sim: TenderlySimulation
