@@ -131,7 +131,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
     timelockStorageObj[`queuedTransactions[${hash}]`] = 'true'
   })
 
-  if (governorType === 'oz') {
+  if (governorType === 'oz' || governorType === 'arb') {
     const id = hashOperationBatchOz(targets, values, calldatas, HashZero, keccak256(toUtf8Bytes(description)))
     timelockStorageObj[`_timestamps[${id.toHexString()}]`] = simTimestamp.toString()
   }
@@ -177,12 +177,29 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
       const id = hashOperationOz(target, values[i], calldatas[i], HashZero, HashZero)
       governorStateOverrides[`_timestamps[${id}]`] = '2' // must be > 1.
     })
+  } else if (governorType === 'arb') {
+    const proposalCoreKey = `_proposals[${proposalId.toString()}]`
+    const proposalVotesKey = `_proposalVotes[${proposalId.toString()}]`
+    governorStateOverrides = {
+      [`${proposalCoreKey}.voteStart._deadline`]: '1337',
+      [`${proposalCoreKey}.voteEnd._deadline`]: '1337',
+      [`${proposalCoreKey}.canceled`]: 'false',
+      [`${proposalCoreKey}.executed`]: 'false',
+      [`${proposalVotesKey}.forVotes`]: votingTokenSupply.toString(),
+      [`${proposalVotesKey}.againstVotes`]: '0',
+      [`${proposalVotesKey}.abstainVotes`]: '0',
+    }
+
+    targets.forEach((target, i) => {
+      const id = hashOperationOz(target, values[i], calldatas[i], HashZero, HashZero)
+      governorStateOverrides[`_timestamps[${id}]`] = '2' // must be > 1.
+    })
   } else {
     throw new Error(`Cannot generate overrides for unknown governor type: ${governorType}`)
   }
 
   const stateOverrides = {
-    networkID: '1',
+    networkID: '42161',
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -211,7 +228,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   const executeInputs =
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
   const simulationPayload: TenderlyPayload = {
-    network_id: '1',
+    network_id: '42161',
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from: DEFAULT_FROM,
@@ -238,6 +255,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
       [governor.address]: { storage: storageObj.stateOverrides[governor.address.toLowerCase()].value },
     },
   }
+  writeFileSync('simulationPayload.json', JSON.stringify(simulationPayload, null, 2))
   const sim = await sendSimulation(simulationPayload)
   writeFileSync('new-response.json', JSON.stringify(sim, null, 2))
   return { sim, proposal, latestBlock }
@@ -325,7 +343,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
     timelockStorageObj[`queuedTransactions[${hash}]`] = 'true'
   })
 
-  if (governorType === 'oz') {
+  if (governorType === 'oz' || governorType === 'arb') {
     const id = hashOperationBatchOz(targets, values, calldatas, HashZero, keccak256(toUtf8Bytes(description)))
     timelockStorageObj[`_timestamps[${id.toHexString()}]`] = simTimestamp.toString()
   }
@@ -354,12 +372,23 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
       [`${proposalVotesKey}.againstVotes`]: '0',
       [`${proposalVotesKey}.abstainVotes`]: '0',
     }
+  } else if (governorType === 'arb') {
+    const proposalCoreKey = `_proposals[${proposalIdBn.toString()}]`
+    const proposalVotesKey = `_proposalVotes[${proposalIdBn.toString()}]`
+    governorStateOverrides = {
+      [`${proposalCoreKey}.voteEnd._deadline`]: '1337',
+      [`${proposalCoreKey}.canceled`]: 'false',
+      [`${proposalCoreKey}.executed`]: 'false',
+      [`${proposalVotesKey}.forVotes`]: votingTokenSupply.toString(),
+      [`${proposalVotesKey}.againstVotes`]: '0',
+      [`${proposalVotesKey}.abstainVotes`]: '0',
+    }
   } else {
     throw new Error(`Cannot generate overrides for unknown governor type: ${governorType}`)
   }
 
   const stateOverrides = {
-    networkID: '1',
+    networkID: '42161',
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -380,7 +409,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
 
   let simulationPayload: TenderlyPayload = {
-    network_id: '1',
+    network_id: '42161',
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from,
@@ -407,6 +436,8 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
       [governor.address]: { storage: storageObj.stateOverrides[governor.address.toLowerCase()].value },
     },
   }
+  // dump simulationPayload to a file
+  writeFileSync('simulationPayload.json', JSON.stringify(simulationPayload, null, 2))
 
   const formattedProposal: ProposalEvent = {
     ...(proposalCreatedEvent.args as unknown as ProposalEvent),

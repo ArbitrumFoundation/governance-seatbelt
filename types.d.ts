@@ -4,7 +4,7 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 
 // --- Simulation configurations ---
 // TODO Consider refactoring to an enum instead of string.
-export type GovernorType = 'oz' | 'bravo'
+export type GovernorType = 'oz' | 'bravo' | 'arb'
 
 interface SimulationConfigBase {
   type: 'executed' | 'proposed' | 'new'
@@ -147,7 +147,7 @@ type ContractObject = {
 }
 
 export type TenderlyPayload = {
-  network_id: '1' | '3' | '4' | '5' | '42'
+  network_id: '1' | '3' | '4' | '5' | '42' | '42161'
   block_number?: number
   transaction_index?: number
   from: string

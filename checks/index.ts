@@ -21,8 +21,8 @@ const ALL_CHECKS: {
   checkValueRequired,
   // The solc check must be run before the slither check, because the compilation exports a zip file
   // which is consumed by slither. This prevents us from having to compile the contracts twice.
-  checkSolc,
-  checkSlither,
+  // checkSolc,
+  // checkSlither,
 }
 
 export default ALL_CHECKS
