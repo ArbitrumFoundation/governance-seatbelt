@@ -105,7 +105,6 @@ async function simRetryable(sr: SimulationResult, simname:string){
         description: 'The is the L2 Retryable Execution of proposal ' + parentId.sub(1).toHexString(),
         parentId: parentId
       }
-      console.log(l2tol1config)
       const { sim, proposal, latestBlock } = await simulate(l2tol1config)
       return { sim, proposal, latestBlock, config: l2tol1config }
     }
@@ -192,6 +191,13 @@ async function main() {
 
       const { sim, proposal, latestBlock } = await simulate(config)
       simOutputs.push({ sim, proposal, latestBlock, config })
+
+      const l2tol1sim = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
+      if(l2tol1sim) {
+        simOutputs.push(l2tol1sim!)
+        const retryablesim = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
+        if(retryablesim) simOutputs.push(retryablesim!)
+      }
       console.log(`    done`)
     }
   }
