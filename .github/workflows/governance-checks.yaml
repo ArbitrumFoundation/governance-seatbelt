@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - DAO_NAME: 'ArbCore'
-            GOVERNOR_ADDRESS: '0xf07ded9dc292157749b6fd268e37df6ea38395b9'
+            GOVERNOR_ADDRESS: '0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9'
           - DAO_NAME: 'ArbTreasury'
-            GOVERNOR_ADDRESS: '0x789fc99093b09ad01c34dc7251d0c89ce743e5a4'
+            GOVERNOR_ADDRESS: '0x789fC99093B09aD01C34DC7251D0C89ce743e5a4'
           
 
     name: Check all live proposals

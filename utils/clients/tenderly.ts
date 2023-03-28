@@ -96,6 +96,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
     values: values.map(BigNumber.from),
     signatures,
     calldatas,
+    chainid: network.chainId.toString(),
   }
 
   // --- Prepare simulation configuration ---
@@ -441,13 +442,12 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
       [governor.address]: { storage: storageObj.stateOverrides[governor.address.toLowerCase()].value },
     },
   }
-  // dump simulationPayload to a file
-  writeFileSync('simulationPayload.json', JSON.stringify(simulationPayload, null, 2))
 
   const formattedProposal: ProposalEvent = {
     ...(proposalCreatedEvent.args as unknown as ProposalEvent),
     values, // This does not get included otherwise, same reason why we use `proposalCreatedEvent.args![3]` above.
     id: BigNumber.from(proposalId), // Make sure we always have an ID field
+    chainid: network.chainId.toString(),
   }
 
   let sim = await sendSimulation(simulationPayload)
@@ -555,6 +555,7 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
     values: values.map(BigNumber.from),
     signatures,
     calldatas,
+    chainid: network.chainId.toString(),
   }
 
   // Set `from` arbitrarily.
@@ -589,7 +590,6 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
     const id = hashOperationOz(args[0], args[1], args[2], args[3], args[4])
     timelockStorageObj[`_timestamps[${id.toHexString()}]`] = simTimestamp.toString()
   }
-  console.log(timelockStorageObj)
 
   const stateOverrides = {
     networkID: '1',
@@ -600,9 +600,6 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
     },
   }
   const storageObj = await sendEncodeRequest(stateOverrides)
-
-  console.log(stateOverrides)
-  console.log(storageObj)
 
   const simulationPayload: TenderlyPayload = {
     network_id: '1',
@@ -665,6 +662,7 @@ async function simulateRetryable(config: SimulationConfigRetryable): Promise<Sim
     values: values.map(BigNumber.from),
     signatures,
     calldatas,
+    chainid: network.chainId.toString(),
   }
 
   // Run simulation at the block right after the proposal ends.

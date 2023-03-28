@@ -36,7 +36,7 @@ async function checkVerificationStatuses(
   const info: string[] = []
   for (const addr of addresses) {
     const status = await checkVerificationStatus(sim, addr, provider)
-    const address = toAddressLink(addr)
+    const address = toAddressLink(addr, false, sim.simulation.network_id === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')
     if (status === 'eoa') info.push(bullet(`${address}: EOA (verification not applicable)`))
     else if (status === 'verified') info.push(bullet(`${address}: Contract (verified)`))
     else info.push(bullet(`${address}: Contract (not verified)`))

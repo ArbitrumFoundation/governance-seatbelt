@@ -103,6 +103,7 @@ export interface ProposalEvent {
   values: BigNumber[]
   signatures: string[]
   calldatas: string[]
+  chainid: string
 }
 
 export type Message = string

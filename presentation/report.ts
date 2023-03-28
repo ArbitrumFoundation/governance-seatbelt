@@ -45,8 +45,8 @@ export function blockQuote(str: string): string {
  * @param address to be linked
  * @param code whether to link to the code tab
  */
-export function toAddressLink(address: string, code: boolean = false): string {
-  return `[\`${address}\`](https://arbiscan.io/address/${address}${code ? '#code' : ''})`
+export function toAddressLink(address: string, code: boolean = false, explorer: string = 'https://etherscan.io'): string {
+  return `[\`${address}\`](${explorer}/address/${address}${code ? '#code' : ''})`
 }
 
 // -- Report formatters ---
@@ -175,14 +175,14 @@ _Updated as of block [${blocks.current.number}](https://arbiscan.io/block/${bloc
   )}_
 
 - ID: ${formatProposalId(governorType, id!)}
-- Proposer: ${toAddressLink(proposer)}
+- Proposer: ${toAddressLink(proposer, false, proposal.chainid === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')}
 - Start Block: ${startBlock} (${
     blocks.start ? formatTime(blocks.start.timestamp) : formatTime(estimateTime(blocks.current, startBlock))
   })
 - End Block: ${endBlock} (${
     blocks.end ? formatTime(blocks.end.timestamp) : formatTime(estimateTime(blocks.current, endBlock))
   })
-- Targets: ${targets.map((target) => toAddressLink(target, true)).join('; ')}
+- Targets: ${targets.map((target) => toAddressLink(target, true, proposal.chainid === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')).join('; ')}
 
 ## Table of contents
 
