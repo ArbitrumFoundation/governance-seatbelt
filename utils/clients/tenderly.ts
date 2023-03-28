@@ -539,7 +539,7 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
   const latestBlock = await l1provider.getBlock(blockNumberToUse)
   // const governor = getGovernor(governorType, governorAddress)
 
-  const proposalId = BigNumber.from(parentId).add(1)
+  const proposalId = BigNumber.from(parentId).add(config.idoffset)
 
   const startBlock = BigNumber.from(latestBlock.number - 100) // arbitrarily subtract 100
   const endBlock = startBlock.add(1)
@@ -607,7 +607,7 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
     block_number: latestBlock.number,
     from: DEFAULT_FROM,
     to: timelock,
-    input: calldatas[0].replace('0x01d5062a', '0x134008d3'),
+    input: calldatas[0].replace('0x01d5062a', '0x134008d3'), // replace schedlue to execute
     gas: BLOCK_GAS_LIMIT,
     gas_price: '0',
     value: "1000000000000000", // retryable submission cost TODO: don't hardcode this
@@ -646,7 +646,7 @@ async function simulateRetryable(config: SimulationConfigRetryable): Promise<Sim
   const latestBlock = await provider.getBlock(blockNumberToUse)
   // const governor = getGovernor(governorType, governorAddress)
 
-  const proposalId = BigNumber.from(parentId).add(1)
+  const proposalId = BigNumber.from(parentId).add(config.idoffset)
 
   const startBlock = BigNumber.from(latestBlock.number - 100) // arbitrarily subtract 100
   const endBlock = startBlock.add(1)

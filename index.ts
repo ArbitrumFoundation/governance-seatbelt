@@ -4,7 +4,7 @@
 
 import dotenv from 'dotenv'
 dotenv.config()
-import { BigNumber, Contract } from 'ethers'
+import { BigNumber, BigNumberish, Contract } from 'ethers'
 import { DAO_NAME, GOVERNOR_ADDRESS, SIM_NAME } from './utils/constants'
 import { provider } from './utils/clients/ethers'
 import { simulate } from './utils/clients/tenderly'
@@ -36,9 +36,8 @@ async function simL2toL1(sr: SimulationResult, simname:string){
   const rawlog = sim.transaction.transaction_info.logs?.map(l=>l.raw)
   const L2ToL1TxEvents = parseTypedLogs(ArbSys__factory, rawlog as any, 'L2ToL1Tx')
 
-  if(L2ToL1TxEvents.length > 1){
-    throw new Error("More than one L2ToL1TxEvents found")
-  }
+  const simresults = []
+  let offset = 1;
   for (const l2ToL1TxEvent of L2ToL1TxEvents) {
     const l2tol1config: SimulationConfigCrosschain = {
       type: 'crosschain',
@@ -50,11 +49,14 @@ async function simL2toL1(sr: SimulationResult, simname:string){
       signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
       calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
       description: 'The is the L1 Timelock Execution of proposal ' + parentId.toHexString(),
-      parentId: parentId
+      parentId: parentId,
+      idoffset: offset
     }
+    offset += 2
     const { sim, proposal, latestBlock } = await simulate(l2tol1config)
-    return { sim, proposal, latestBlock, config: l2tol1config }
+    simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
   }
+  return simresults
 }
 
 async function simRetryable(sr: SimulationResult, simname:string){
@@ -85,6 +87,7 @@ async function simRetryable(sr: SimulationResult, simname:string){
       bridgeMessageEvent: bm,
     })
   }
+  const simresults = []
   for (const {inboxMessageEvent, bridgeMessageEvent} of messages) {
 
     if (bridgeMessageEvent.kind === InboxMessageKind.L1MessageType_submitRetryableTx) {
@@ -103,12 +106,14 @@ async function simRetryable(sr: SimulationResult, simname:string){
         signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
         calldatas: [parsedRetryable.data], // Array of encoded calldatas.
         description: 'The is the L2 Retryable Execution of proposal ' + parentId.sub(1).toHexString(),
-        parentId: parentId
+        parentId: parentId,
+        idoffset: 1
       }
       const { sim, proposal, latestBlock } = await simulate(l2tol1config)
-      return { sim, proposal, latestBlock, config: l2tol1config }
+      simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
     }
   }
+  return simresults
 }
 
 /**
@@ -132,13 +137,19 @@ async function main() {
     simOutputs.push({ sim, proposal, latestBlock, config })
 
     if ((config.type === 'new' || config.type === 'proposed') && config.governorType === 'arb') {
-      const l2tol1sim = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
-      simOutputs.push(l2tol1sim!)
-      const retryablesim = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
-      simOutputs.push(retryablesim!)
+      const l2tol1sims = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
+      for (const l2tol1sim of l2tol1sims) {
+        simOutputs.push(l2tol1sim!)
+        const retryablesims = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
+        for (const retryablesim of retryablesims) {
+          simOutputs.push(retryablesim!)
+        }
+      }
     } else if (config.type === 'crosschain' && config.governorType === 'arb') {
-      const retryablesim = await simRetryable({ sim, proposal, latestBlock }, config.daoName)
-      simOutputs.push(retryablesim!)
+      const retryablesims = await simRetryable({ sim, proposal, latestBlock }, config.daoName)
+      for (const retryablesim of retryablesims) {
+        simOutputs.push(retryablesim!)
+      }
     }
 
     governorType = await inferGovernorType(config.governorAddress)
@@ -192,11 +203,13 @@ async function main() {
       const { sim, proposal, latestBlock } = await simulate(config)
       simOutputs.push({ sim, proposal, latestBlock, config })
 
-      const l2tol1sim = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
-      if(l2tol1sim) {
+      const l2tol1sims = await simL2toL1({ sim, proposal, latestBlock }, config.daoName)
+      for (const l2tol1sim of l2tol1sims) {
         simOutputs.push(l2tol1sim!)
-        const retryablesim = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
-        if(retryablesim) simOutputs.push(retryablesim!)
+        const retryablesims = await simRetryable({ sim: l2tol1sim!.sim, proposal: l2tol1sim!.proposal, latestBlock: l2tol1sim!.latestBlock }, config.daoName)
+        for (const retryablesim of retryablesims) {
+          simOutputs.push(retryablesim!)
+        }
       }
       console.log(`    done`)
     }

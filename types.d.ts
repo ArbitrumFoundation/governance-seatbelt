@@ -40,6 +40,7 @@ export interface SimulationConfigCrosschain extends SimulationConfigBase {
   calldatas: string[]
   description: string
   parentId: BigNumberish
+  idoffset: BigNumberish
 }
 
 export interface SimulationConfigRetryable extends SimulationConfigBase {
@@ -50,6 +51,7 @@ export interface SimulationConfigRetryable extends SimulationConfigBase {
   calldatas: string[]
   description: string
   parentId: BigNumberish
+  idoffset: BigNumberish
   from: string
 }
 
