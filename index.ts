@@ -250,7 +250,8 @@ async function main() {
       { start: startBlock, end: endBlock, current: latestBlock },
       proposal,
       checkResults,
-      dir
+      dir,
+      sim.simulation.id
     )
   }
   console.log('Done!')
