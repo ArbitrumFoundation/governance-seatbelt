@@ -13,6 +13,7 @@ import { unified } from 'unified'
 import { mdToPdf } from 'md-to-pdf'
 import { formatProposalId } from '../utils/contracts/governor'
 import { AllCheckResults, GovernorType, ProposalEvent } from '../types'
+import { TENDERLY_USER, TENDERLY_PROJECT_SLUG } from '../utils/constants'
 
 // --- Markdown helpers ---
 
@@ -118,7 +119,8 @@ export async function generateAndSaveReports(
   blocks: { current: Block; start: Block | null; end: Block | null },
   proposal: ProposalEvent,
   checks: AllCheckResults,
-  dir: string
+  dir: string,
+  simid: string
 ) {
   // Prepare the output folder and filename.
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -126,7 +128,7 @@ export async function generateAndSaveReports(
   const path = `${dir}/${id}`
 
   // Generate the base markdown proposal report. This is the markdown report which is translated into other file types.
-  const baseReport = await toMarkdownProposalReport(governorType, blocks, proposal, checks)
+  const baseReport = await toMarkdownProposalReport(governorType, blocks, proposal, checks, simid)
 
   // The table of contents' links in the baseReport work when converted to HTML, but do not work as Markdown
   // or PDF links, since the emojis in the header titles cause issues. We apply the remarkFixEmojiLinks plugin
@@ -162,7 +164,8 @@ async function toMarkdownProposalReport(
   governorType: GovernorType,
   blocks: { current: Block; start: Block | null; end: Block | null },
   proposal: ProposalEvent,
-  checks: AllCheckResults
+  checks: AllCheckResults,
+  simid: string
 ): Promise<string> {
   const { id, proposer, targets, endBlock, startBlock, description } = proposal
 
@@ -183,6 +186,7 @@ _Updated as of block [${blocks.current.number}](https://arbiscan.io/block/${bloc
     blocks.end ? formatTime(blocks.end.timestamp) : formatTime(estimateTime(blocks.current, endBlock))
   })
 - Targets: ${targets.map((target) => toAddressLink(target, true, proposal.chainid === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')).join('; ')}
+- Tenderly Simulation: [${simid}](https://dashboard.tenderly.co/${TENDERLY_USER}/${TENDERLY_PROJECT_SLUG}/simulator/${simid})
 
 ## Table of contents
 
