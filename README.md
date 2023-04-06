@@ -12,5 +12,4 @@ yarn start
 
 ## Known Issue
 
-- Each crosschain message is simulated individually, that is, if those action interact with eachother the simulation result will not be correct 
-    - TODO: add checker to flag when multiple crosschain message is created
+- Nova not supported

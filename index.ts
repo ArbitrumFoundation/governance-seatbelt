@@ -68,7 +68,8 @@ async function simRetryable(sr: SimulationResult, simname:string){
   const inboxMessages = parseTypedLogs(Inbox__factory, rawlog as any, 'InboxMessageDelivered(uint256,bytes)')
   if (bridgeMessages.length !== inboxMessages.length) {
     throw new Error('Unexpected number of message delivered events')
-  }
+  } 
+  // TODO: These log can be from Arb1 or Nova Inbox
   const messages: {
     inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
     bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
