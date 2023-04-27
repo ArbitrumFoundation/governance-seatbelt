@@ -35,7 +35,7 @@ export const checkDecodeCalldata: ProposalCheck = {
         // will show the function name as `fallback`. Therefore, we look for the deepest function
         // in the callstack with the same input data and use that to decode/prettify calldata
         call = returnCallOrMatchingSubcall(calldata, call)
-        return prettifyCalldata(call, proposal.targets[i])
+        return prettifyCalldata(call, proposal.targets[i], proposal.chainid)
       })
     )
 
@@ -127,7 +127,7 @@ function getDescription(target: string, sig: string, call: FluffyCall) {
 /**
  * Given a call, return a human-readable description of the call
  */
-async function prettifyCalldata(call: FluffyCall, target: string) {
+async function prettifyCalldata(call: FluffyCall, target: string, chainid: string) {
   // If this is a token action, we decode the amounts and show the token symbol
   const selector = call.input.slice(0, 10)
   const tokenSelectors = new Set([
@@ -137,7 +137,7 @@ async function prettifyCalldata(call: FluffyCall, target: string) {
   ])
   const isTokenAction = tokenSelectors.has(selector)
   const { name, symbol, decimals } = isTokenAction
-    ? await fetchTokenMetadata(call.to)
+    ? await fetchTokenMetadata(call.to, chainid)
     : { name: null, symbol: null, decimals: 0 }
 
   switch (selector) {
