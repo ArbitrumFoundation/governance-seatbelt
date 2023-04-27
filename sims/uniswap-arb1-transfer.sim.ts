@@ -18,5 +18,5 @@ export const config: SimulationConfigNew = {
   values: [call1.value], // Array of values with each call.
   signatures: [call1.signature], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
   calldatas: [call1.calldata], // Array of encoded calldatas.
-  description: 'A roundtrip proposal',
+  description: 'A proposal that transfer 0 ARB token from the l2 alias of uniswap timelock',
 }
