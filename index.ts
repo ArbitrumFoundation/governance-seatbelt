@@ -8,7 +8,7 @@ import { BigNumber, BigNumberish, Contract } from 'ethers'
 import { DAO_NAME, GOVERNOR_ADDRESS, SIM_NAME } from './utils/constants'
 import { provider } from './utils/clients/ethers'
 import { simulate } from './utils/clients/tenderly'
-import { AllCheckResults, GovernorType, SimulationConfig, SimulationConfigBase, SimulationConfigCrosschain, SimulationData, SimulationResult, SimulationConfigRetryable } from './types'
+import { AllCheckResults, GovernorType, SimulationConfig, SimulationConfigBase, SimulationConfigArbL2ToL1, SimulationData, SimulationResult, SimulationConfigArbRetryable } from './types'
 import ALL_CHECKS from './checks'
 import { generateAndSaveReports } from './presentation/report'
 import { PROPOSAL_STATES } from './utils/contracts/governor-bravo'
@@ -29,6 +29,7 @@ import { InboxMessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Inbox'
 import { MessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Bridge'
 import { InboxMessageKind } from '@arbitrum/sdk/dist/lib/dataEntities/message'
 
+// This function find L2ToL1 events in a simulation result and create a new simulation for each of them
 async function simL2toL1(sr: SimulationResult, simname:string){
   const { proposal, sim} = sr
   const parentId = proposal.id!
@@ -39,8 +40,8 @@ async function simL2toL1(sr: SimulationResult, simname:string){
   const simresults = []
   let offset = 1;
   for (const l2ToL1TxEvent of L2ToL1TxEvents) {
-    const l2tol1config: SimulationConfigCrosschain = {
-      type: 'crosschain',
+    const l2tol1config: SimulationConfigArbL2ToL1 = {
+      type: 'arbl2tol1',
       daoName: simname,
       governorType: 'arb',
       governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
@@ -48,17 +49,18 @@ async function simL2toL1(sr: SimulationResult, simname:string){
       values: [l2ToL1TxEvent.callvalue], // Array of values with each call.
       signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
       calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
-      description: 'The is the L1 Timelock Execution of proposal ' + parentId.toHexString(),
+      description: 'The is the L1 Timelock Execution of simulation ' + parentId.toHexString(),
       parentId: parentId,
       idoffset: offset
     }
-    offset += 2
+    offset += 1000000 // reserve spaces for retryable exections
     const { sim, proposal, latestBlock } = await simulate(l2tol1config)
     simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
   }
   return simresults
 }
 
+// This function find retryable in a simulation result and create a new simulation for each of them
 async function simRetryable(sr: SimulationResult, simname:string){
   const { proposal, sim} = sr
   const parentId = proposal.id!
@@ -69,12 +71,14 @@ async function simRetryable(sr: SimulationResult, simname:string){
   if (bridgeMessages.length !== inboxMessages.length) {
     throw new Error('Unexpected number of message delivered events')
   } 
-  // TODO: These log can be from Arb1 or Nova Inbox
+
+  // TODO: Only Arb1 is supported right now
   const messages: {
     inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
     bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
   }[] = []
   for (const bm of bridgeMessages) {
+    if (bm.inbox !== '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f') continue // arb1 inbox
     const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
     if (!im) {
       throw new Error(
@@ -91,13 +95,14 @@ async function simRetryable(sr: SimulationResult, simname:string){
   const simresults = []
   for (const {inboxMessageEvent, bridgeMessageEvent} of messages) {
 
+    let offset = 10000;
     if (bridgeMessageEvent.kind === InboxMessageKind.L1MessageType_submitRetryableTx) {
 
       const parser = new SubmitRetryableMessageDataParser()
       const parsedRetryable = parser.parse(inboxMessageEvent.data)
 
-      const l2tol1config: SimulationConfigRetryable = {
-        type: 'retryable',
+      const l2tol1config: SimulationConfigArbRetryable = {
+        type: 'arbretryable',
         from: bridgeMessageEvent.sender,
         daoName: simname,
         governorType: 'arb',
@@ -106,10 +111,11 @@ async function simRetryable(sr: SimulationResult, simname:string){
         values: [parsedRetryable.l2CallValue], // Array of values with each call.
         signatures: [""], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
         calldatas: [parsedRetryable.data], // Array of encoded calldatas.
-        description: 'The is the L2 Retryable Execution of proposal ' + parentId.sub(1).toHexString(),
+        description: 'The is the L2 Retryable Execution of simulation ' + parentId.toHexString(),
         parentId: parentId,
-        idoffset: 1
+        idoffset: offset
       }
+      offset += 10000
       const { sim, proposal, latestBlock } = await simulate(l2tol1config)
       simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
     }
@@ -146,7 +152,7 @@ async function main() {
           simOutputs.push(retryablesim!)
         }
       }
-    } else if (config.type === 'crosschain' && config.governorType === 'arb') {
+    } else {
       const retryablesims = await simRetryable({ sim, proposal, latestBlock }, config.daoName)
       for (const retryablesim of retryablesims) {
         simOutputs.push(retryablesim!)

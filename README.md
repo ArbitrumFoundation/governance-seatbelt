@@ -13,3 +13,6 @@ yarn start
 ## Known Issue
 
 - Nova not supported
+- Incorrect time due to crosschain block number
+- When simulating executed proposal with retryable, it cannot determine the correct L2 block to use
+- ID scheme for child simulation is weird

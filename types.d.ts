@@ -32,8 +32,8 @@ export interface SimulationConfigNew extends SimulationConfigBase {
   description: string
 }
 
-export interface SimulationConfigCrosschain extends SimulationConfigBase {
-  type: 'crosschain'
+export interface SimulationConfigArbL2ToL1 extends SimulationConfigBase {
+  type: 'arbl2tol1'
   targets: string[]
   values: BigNumberish[]
   signatures: string[]
@@ -43,8 +43,8 @@ export interface SimulationConfigCrosschain extends SimulationConfigBase {
   idoffset: BigNumberish
 }
 
-export interface SimulationConfigRetryable extends SimulationConfigBase {
-  type: 'retryable'
+export interface SimulationConfigArbRetryable extends SimulationConfigBase {
+  type: 'arbretryable'
   targets: string[]
   values: BigNumberish[]
   signatures: string[]
@@ -55,7 +55,7 @@ export interface SimulationConfigRetryable extends SimulationConfigBase {
   from: string
 }
 
-export type SimulationConfig = SimulationConfigExecuted | SimulationConfigProposed | SimulationConfigNew | SimulationConfigCrosschain | SimulationConfigRetryable
+export type SimulationConfig = SimulationConfigExecuted | SimulationConfigProposed | SimulationConfigNew | SimulationConfigArbL2ToL1 | SimulationConfigArbRetryable
 
 export interface SimulationResult {
   sim: TenderlySimulation

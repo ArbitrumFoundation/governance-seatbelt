@@ -102,7 +102,9 @@ function formatTime(blockTimestamp: number): string {
  * @param block the future block number
  */
 function estimateTime(current: Block, block: BigNumber): number {
-  if (block.lt(current.number)) throw new Error('end block is less than current')
+  if (block.lt(current.number)) return 0
+  // TODO: fix this, currently not working if the block is on another chain (e.g. arb1)
+  // throw new Error('end block is less than current')
   return block.sub(current.number).mul(13).add(current.timestamp).toNumber()
 }
 
@@ -113,6 +115,7 @@ function estimateTime(current: Block, block: BigNumber): number {
  * @param checks The checks results.
  * @param dir The directory where the file should be saved. It will be created if it doesn't exist.
  * @param filename The name of the file. All report formats will have the same filename with different extensions.
+ * @param simid The Tenderly simulation ID.
  */
 export async function generateAndSaveReports(
   governorType: GovernorType,

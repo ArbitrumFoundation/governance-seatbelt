@@ -51,6 +51,7 @@ export const checkLogs: ProposalCheck = {
           // Log is not decoded, report the raw data
           // TODO find a transaction with undecoded logs to know how topics/data are formatted in simulation response
           if (log.raw.topics[0] == '0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc'){
+            // hardcoding ArbSys for event decoding
             const IArbSys = new Interface([
               'event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)'
             ]);

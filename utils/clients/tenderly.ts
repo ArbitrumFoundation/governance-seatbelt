@@ -5,7 +5,7 @@ import { hexStripZeros } from '@ethersproject/bytes'
 import { HashZero, Zero } from '@ethersproject/constants'
 import { keccak256 } from '@ethersproject/keccak256'
 import { toUtf8Bytes } from '@ethersproject/strings'
-import { l1provider, provider } from './ethers'
+import { l1provider, provider, arb1provider } from './ethers'
 import mftch, { FETCH_OPT } from 'micro-ftch'
 // @ts-ignore
 const fetchUrl = mftch.default
@@ -33,13 +33,13 @@ import {
   SimulationConfigExecuted,
   SimulationConfigNew,
   SimulationConfigProposed,
-  SimulationConfigCrosschain,
+  SimulationConfigArbL2ToL1,
   SimulationResult,
   StorageEncodingResponse,
   TenderlyContract,
   TenderlyPayload,
   TenderlySimulation,
-  SimulationConfigRetryable,
+  SimulationConfigArbRetryable,
 } from '../../types'
 import { writeFileSync } from 'fs'
 import { Interface } from 'ethers/lib/utils'
@@ -57,8 +57,8 @@ export async function simulate(config: SimulationConfig) {
   if (config.type === 'executed') return await simulateExecuted(config)
   else if (config.type === 'proposed') return await simulateProposed(config)
   else if (config.type === 'new') return await simulateNew(config)
-  else if (config.type === 'crosschain') return await simulateCrosschain(config)
-  else if (config.type === 'retryable') return await simulateRetryable(config)
+  else if (config.type === 'arbl2tol1') return await simulateArbitrumL2ToL1(config)
+  else if (config.type === 'arbretryable') return await simulateArbitrumRetryable(config)
   throw new Error('Invalid simulation type')
 }
 
@@ -187,6 +187,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
     const proposalCoreKey = `_proposals[${proposalId.toString()}]`
     const proposalVotesKey = `_proposalVotes[${proposalId.toString()}]`
     governorStateOverrides = {
+      // using dummy 1337 here because this need to be L1 block number but simBlock is L2 block number
       [`${proposalCoreKey}.voteStart._deadline`]: '1337',
       [`${proposalCoreKey}.voteEnd._deadline`]: '1337',
       [`${proposalCoreKey}.canceled`]: 'false',
@@ -205,7 +206,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   }
 
   const stateOverrides = {
-    networkID: '42161',
+    networkID: governorType === 'arb' ? '42161' : '1',
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -234,7 +235,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   const executeInputs =
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
   const simulationPayload: TenderlyPayload = {
-    network_id: '42161',
+    network_id: governorType === 'arb' ? '42161' : '1',
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from: DEFAULT_FROM,
@@ -261,7 +262,6 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
       [governor.address]: { storage: storageObj.stateOverrides[governor.address.toLowerCase()].value },
     },
   }
-  writeFileSync('simulationPayload.json', JSON.stringify(simulationPayload, null, 2))
   const sim = await sendSimulation(simulationPayload)
   writeFileSync('new-response.json', JSON.stringify(sim, null, 2))
   return { sim, proposal, latestBlock }
@@ -394,7 +394,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
   }
 
   const stateOverrides = {
-    networkID: '42161',
+    networkID: governorType === 'arb' ? '42161' : '1',
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -415,7 +415,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
 
   let simulationPayload: TenderlyPayload = {
-    network_id: '42161',
+    network_id: governorType === 'arb' ? '42161' : '1',
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from,
@@ -524,7 +524,10 @@ async function simulateExecuted(config: SimulationConfigExecuted): Promise<Simul
   return { sim, proposal: formattedProposal, latestBlock }
 }
 
-async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<SimulationResult> {
+// This function simulate the L2 -> L1 crosschain proposal execution of arb governor
+// it replace the schedule call with a execute call to L1 timelock,
+// while overriding storage in the L1 timelock to make it executable without delay  
+async function simulateArbitrumL2ToL1(config: SimulationConfigArbL2ToL1): Promise<SimulationResult> {
   // --- Validate config ---
   const { governorType, targets, values, calldatas, description, signatures, parentId } = config
   if (targets.length !== 1) throw new Error('targets must be length 1')
@@ -631,7 +634,8 @@ async function simulateCrosschain(config: SimulationConfigCrosschain): Promise<S
   return { sim, proposal, latestBlock }
 }
 
-async function simulateRetryable(config: SimulationConfigRetryable): Promise<SimulationResult> {
+// This function simulate the execution of a retryable ticket on Arbitrum 
+async function simulateArbitrumRetryable(config: SimulationConfigArbRetryable): Promise<SimulationResult> {
   // --- Validate config ---
   const { targets, values, calldatas, description, signatures, parentId, from } = config
   if (targets.length !== 1) throw new Error('targets must be length 1')
@@ -641,9 +645,9 @@ async function simulateRetryable(config: SimulationConfigRetryable): Promise<Sim
   const target = targets[0]
 
   // --- Get details about the proposal we're simulating ---
-  const network = await provider.getNetwork()
+  const network = await arb1provider.getNetwork()
   const blockNumberToUse = (await getLatestBlock(network.chainId)) - 3 // subtracting a few blocks to ensure tenderly has the block
-  const latestBlock = await provider.getBlock(blockNumberToUse)
+  const latestBlock = await arb1provider.getBlock(blockNumberToUse)
   // const governor = getGovernor(governorType, governorAddress)
 
   const proposalId = BigNumber.from(parentId).add(config.idoffset)
