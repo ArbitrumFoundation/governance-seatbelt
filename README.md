@@ -4,8 +4,8 @@ This repository is a modified version of the Uniswap governance-seatbelt that su
 
 To test it out, configure .env and run 
 ```
-// To simulate payload
-SIM_NAME=arbcore-rt yarn start
+// To simulate AIP 1.2
+SIM_NAME=arbcore-aip1.2 yarn start
 // To simulate onchain proposals
 yarn start
 ```

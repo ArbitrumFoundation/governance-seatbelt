@@ -16,7 +16,7 @@ const call1 = {
 
 export const config: SimulationConfigNew = {
   type: 'new',
-  daoName: 'ArbitrumCore',
+  daoName: 'ArbCore',
   governorType: 'arb',
   governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
   targets: [call1.target], // Array of targets to call.
