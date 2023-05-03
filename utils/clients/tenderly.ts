@@ -43,6 +43,7 @@ import {
 } from '../../types'
 import { writeFileSync } from 'fs'
 import { Interface } from 'ethers/lib/utils'
+import { ethers } from 'ethers'
 
 const TENDERLY_FETCH_OPTIONS = { type: 'json', headers: { 'X-Access-Key': TENDERLY_ACCESS_TOKEN } }
 const DEFAULT_FROM = '0xD73a92Be73EfbFcF3854433A5FcbAbF9c1316073' // arbitrary EOA not used on-chain
@@ -615,6 +616,7 @@ async function simulateArbitrumL2ToL1(config: SimulationConfigArbL2ToL1): Promis
     },
   }
   const storageObj = await sendEncodeRequest(stateOverrides)
+  const iface = new ethers.utils.Interface(["function schedule(address,uint256,bytes,bytes32,bytes32,uint256)", "function execute(address,uint256,bytes,bytes32,bytes32)"])
 
   const simulationPayload: TenderlyPayload = {
     network_id: '1',
@@ -622,7 +624,7 @@ async function simulateArbitrumL2ToL1(config: SimulationConfigArbL2ToL1): Promis
     block_number: latestBlock.number,
     from: DEFAULT_FROM,
     to: timelock,
-    input: calldatas[0].replace('0x01d5062a', '0x134008d3'), // replace schedlue to execute
+    input: calldatas[0].replace(iface.getSighash('schedule'), iface.getSighash('execute')), // replace schedlue to execute
     gas: BLOCK_GAS_LIMIT,
     gas_price: '0',
     value: "1000000000000000", // retryable submission cost TODO: don't hardcode this
