@@ -62,6 +62,15 @@ export async function simulate(config: SimulationConfig) {
   throw new Error('Invalid simulation type')
 }
 
+function govTypeToNetwork(govType: string) {
+  switch (govType) {
+    case "arb":
+      return "42161"
+    default:
+      return "1"
+  }
+}
+
 /**
  * @notice Simulates execution of an on-chain proposal that has not yet been executed
  * @param config Configuration object
@@ -207,7 +216,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   }
 
   const stateOverrides = {
-    networkID: governorType === 'arb' ? '42161' : '1',
+    networkID: govTypeToNetwork(governorType),
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -236,7 +245,7 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   const executeInputs =
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
   const simulationPayload: TenderlyPayload = {
-    network_id: governorType === 'arb' ? '42161' : '1',
+    network_id: govTypeToNetwork(governorType),
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from: DEFAULT_FROM,
@@ -397,7 +406,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
   }
 
   const stateOverrides = {
-    networkID: governorType === 'arb' ? '42161' : '1',
+    networkID: govTypeToNetwork(governorType),
     stateOverrides: {
       [timelock.address]: {
         value: timelockStorageObj,
@@ -418,7 +427,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
     governorType === 'bravo' ? [proposalId.toString()] : [targets, values, calldatas, descriptionHash]
 
   let simulationPayload: TenderlyPayload = {
-    network_id: governorType === 'arb' ? '42161' : '1',
+    network_id: govTypeToNetwork(governorType),
     // this field represents the block state to simulate against, so we use the latest block number
     block_number: latestBlock.number,
     from,
