@@ -62,7 +62,8 @@ function selectorFromSig(sig: string): string {
  */
 function findMatchingCall(from: string, calldata: string, calls: any[]): FluffyCall | null {
   from = getAddress(from)
-  const callMatches = (f: string, c: string) => c === calldata
+  // removed check for from address because crosschain execution addresses are not known
+  const callMatches = (f: string, c: string) => c === calldata // && getAddress(f) === from
   for (const call of calls) {
     if (callMatches(call.from, call.input)) return call
     if (call.calls) {
