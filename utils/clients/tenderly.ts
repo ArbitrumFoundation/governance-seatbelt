@@ -186,10 +186,11 @@ async function simulateNew(config: SimulationConfigNew): Promise<SimulationResul
   } else if (governorType === 'arb') {
     const proposalCoreKey = `_proposals[${proposalId.toString()}]`
     const proposalVotesKey = `_proposalVotes[${proposalId.toString()}]`
+    // this need to be L1 block number but simBlock is L2 block number
+    // cannot use 0, but also need be less than current, so using 1 as a dummy value here
     governorStateOverrides = {
-      // using dummy 1337 here because this need to be L1 block number but simBlock is L2 block number
-      [`${proposalCoreKey}.voteStart._deadline`]: '1337',
-      [`${proposalCoreKey}.voteEnd._deadline`]: '1337',
+      [`${proposalCoreKey}.voteStart._deadline`]: '1',
+      [`${proposalCoreKey}.voteEnd._deadline`]: '1',
       [`${proposalCoreKey}.canceled`]: 'false',
       [`${proposalCoreKey}.executed`]: 'false',
       [`${proposalVotesKey}.forVotes`]: votingTokenSupply.toString(),
@@ -381,8 +382,10 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
   } else if (governorType === 'arb') {
     const proposalCoreKey = `_proposals[${proposalIdBn.toString()}]`
     const proposalVotesKey = `_proposalVotes[${proposalIdBn.toString()}]`
+    // this need to be L1 block number but simBlock is L2 block number
+    // cannot use 0, but also need be less than current, so using 1 as a dummy value here
     governorStateOverrides = {
-      [`${proposalCoreKey}.voteEnd._deadline`]: '1337',
+      [`${proposalCoreKey}.voteEnd._deadline`]: '1',
       [`${proposalCoreKey}.canceled`]: 'false',
       [`${proposalCoreKey}.executed`]: 'false',
       [`${proposalVotesKey}.forVotes`]: votingTokenSupply.toString(),
