@@ -553,7 +553,6 @@ async function simulateArbitrumL2ToL1(config: SimulationConfigArbL2ToL1): Promis
   const network = await l1provider.getNetwork()
   const blockNumberToUse = (await getLatestBlock(network.chainId)) - 3 // subtracting a few blocks to ensure tenderly has the block
   const latestBlock = await l1provider.getBlock(blockNumberToUse)
-  // const governor = getGovernor(governorType, governorAddress)
 
   const proposalId = BigNumber.from(parentId).add(config.idoffset)
 
@@ -662,7 +661,6 @@ async function simulateArbitrumRetryable(config: SimulationConfigArbRetryable): 
   const network = await arb1provider.getNetwork()
   const blockNumberToUse = (await getLatestBlock(network.chainId)) - 3 // subtracting a few blocks to ensure tenderly has the block
   const latestBlock = await arb1provider.getBlock(blockNumberToUse)
-  // const governor = getGovernor(governorType, governorAddress)
 
   const proposalId = BigNumber.from(parentId).add(config.idoffset)
 

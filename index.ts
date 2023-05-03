@@ -6,7 +6,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 import { BigNumber, BigNumberish, Contract } from 'ethers'
 import { DAO_NAME, GOVERNOR_ADDRESS, SIM_NAME } from './utils/constants'
-import { provider } from './utils/clients/ethers'
+import { arb1provider, l1provider, provider } from './utils/clients/ethers'
 import { simulate } from './utils/clients/tenderly'
 import { AllCheckResults, GovernorType, SimulationConfig, SimulationConfigBase, SimulationConfigArbL2ToL1, SimulationData, SimulationResult, SimulationConfigArbRetryable } from './types'
 import ALL_CHECKS from './checks'
@@ -28,6 +28,7 @@ import { EventArgs, parseTypedLogs } from '@arbitrum/sdk/dist/lib/dataEntities/e
 import { InboxMessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Inbox'
 import { MessageDeliveredEvent } from '@arbitrum/sdk/dist/lib/abi/Bridge'
 import { InboxMessageKind } from '@arbitrum/sdk/dist/lib/dataEntities/message'
+import { getL2Network }from '@arbitrum/sdk'
 
 // This function find L2ToL1 events in a simulation result and create a new simulation for each of them
 async function simL2toL1(sr: SimulationResult, simname:string){
@@ -78,7 +79,7 @@ async function simRetryable(sr: SimulationResult, simname:string){
     bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
   }[] = []
   for (const bm of bridgeMessages) {
-    if (bm.inbox !== '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f') continue // arb1 inbox
+    if (bm.inbox !== (await getL2Network(arb1provider as any)).ethBridge.inbox) continue // arb1 inbox
     const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
     if (!im) {
       throw new Error(
