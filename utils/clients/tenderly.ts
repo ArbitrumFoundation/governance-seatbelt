@@ -695,7 +695,7 @@ async function simulateArbitrumRetryable(config: SimulationConfigArbRetryable): 
     input: calldatas[0],
     gas: BLOCK_GAS_LIMIT,
     gas_price: '0',
-    value: "0", // retryable submission cost TODO: don't hardcode this
+    value: "0",
     save_if_fails: true, // Set to true to save the simulation to your Tenderly dashboard if it fails.
     save: true, // Set to true to save the simulation to your Tenderly dashboard if it succeeds.
     generate_access_list: true, // not required, but useful as a sanity check to ensure consistency in the simulation response
