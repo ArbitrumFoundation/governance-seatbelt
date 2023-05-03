@@ -108,6 +108,17 @@ function estimateTime(current: Block, block: BigNumber): number {
   return block.sub(current.number).mul(13).add(current.timestamp).toNumber()
 }
 
+export function getExplorer(chainid: string): string {
+  switch (chainid) {
+    case "1":
+      return 'https://etherscan.io'
+    case "42161":
+      return 'https://arbiscan.io'
+    default:
+      return 'https://etherscan.io'
+  }
+}
+
 /**
  * Generates the proposal report and saves Markdown, PDF, and HTML versions of it.
  * @param blocks the relevant blocks for the proposal.
@@ -181,14 +192,14 @@ _Updated as of block [${blocks.current.number}](https://arbiscan.io/block/${bloc
   )}_
 
 - ID: ${formatProposalId(governorType, id!)}
-- Proposer: ${toAddressLink(proposer, false, proposal.chainid === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')}
+- Proposer: ${toAddressLink(proposer, false, getExplorer(proposal.chainid))}
 - Start Block: ${startBlock} (${
     blocks.start ? formatTime(blocks.start.timestamp) : formatTime(estimateTime(blocks.current, startBlock))
   })
 - End Block: ${endBlock} (${
     blocks.end ? formatTime(blocks.end.timestamp) : formatTime(estimateTime(blocks.current, endBlock))
   })
-- Targets: ${targets.map((target) => toAddressLink(target, true, proposal.chainid === "42161" ? 'https://arbiscan.io' : 'https://etherscan.io')).join('; ')}
+- Targets: ${targets.map((target) => toAddressLink(target, true, getExplorer(proposal.chainid))).join('; ')}
 - Tenderly Simulation: [${simid}](https://dashboard.tenderly.co/${TENDERLY_USER}/${TENDERLY_PROJECT_SLUG}/simulator/${simid})
 
 ## Table of contents
