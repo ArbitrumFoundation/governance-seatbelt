@@ -1,5 +1,5 @@
 {
-  "name": "@uniswap/governance-seatbelt",
+  "name": "@arbitrum/governance-seatbelt",
   "version": "1.0.0-alpha.0",
   "engines": {
     "node": ">=14.16"
