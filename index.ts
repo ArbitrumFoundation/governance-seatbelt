@@ -45,7 +45,13 @@ async function simL2toL1(sr: SimulationResult, simname: string) {
   const parentId = proposal.id!
 
   const rawlog = sim.transaction.transaction_info.logs?.map((l) => l.raw)
-  const L2ToL1TxEvents = parseTypedLogs(ArbSys__factory, rawlog as any, 'L2ToL1Tx')
+  let L2ToL1TxEvents
+  try {
+    L2ToL1TxEvents = parseTypedLogs(ArbSys__factory, rawlog as any, 'L2ToL1Tx')
+  } catch (error) {
+    // parseTypedLogs might throw if there are no matching events
+    return []
+  }
 
   const simresults = []
   let offset = 1
@@ -76,8 +82,17 @@ async function simRetryable(sr: SimulationResult, simname: string) {
   const parentId = proposal.id!
 
   const rawlog = sim.transaction.transaction_info.logs?.map((l) => l.raw)
-  const bridgeMessages = parseTypedLogs(Bridge__factory, rawlog as any, 'MessageDelivered')
-  const inboxMessages = parseTypedLogs(Inbox__factory, rawlog as any, 'InboxMessageDelivered(uint256,bytes)')
+
+  let bridgeMessages
+  let inboxMessages
+  try {
+    bridgeMessages = parseTypedLogs(Bridge__factory, rawlog as any, 'MessageDelivered')
+    inboxMessages = parseTypedLogs(Inbox__factory, rawlog as any, 'InboxMessageDelivered(uint256,bytes)')
+  } catch (error) {
+    // parseTypedLogs might throw if there are no matching events
+    return []
+  }
+
   if (bridgeMessages.length !== inboxMessages.length) {
     throw new Error('Unexpected number of message delivered events')
   }
