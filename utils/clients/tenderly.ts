@@ -520,11 +520,10 @@ async function simulateExecuted(config: SimulationConfigExecuted): Promise<Simul
         await governor.timelock(),
         [
           'event CallExecuted(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data)',
-          'event CallScheduled(bytes32 indexed id,uint256 indexed index,address target,uint256 value,bytes data,bytes32 predecessor,uint256 delay)',
+          'event CallScheduled(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)',
         ],
         provider
       )
-
       const [proposalQueuedLogs, callScheduledLogs, callExecutedLogs] = await Promise.all([
         governor.queryFilter(governor.filters.ProposalQueued(), ...blockRange),
         timelock.queryFilter(timelock.filters.CallScheduled(), ...blockRange),
