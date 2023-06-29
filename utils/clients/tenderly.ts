@@ -533,6 +533,8 @@ async function simulateExecuted(config: SimulationConfigExecuted): Promise<Simul
       const proposalQueuedEvent = proposalQueuedLogs.filter((log) => {
         return getProposalId(log.args as unknown as ProposalEvent).eq(proposalId)
       })[0]
+      // We use the first timelock call id scheduled when the proposal was queued to find the execution log
+      // note that if multiple proposals are queued in the same transaction, this may track the wrong proposal
       const callScheduledEvent = callScheduledLogs.filter((log) => {
         return log.transactionHash === proposalQueuedEvent.transactionHash
       })[0]
