@@ -6,6 +6,7 @@ import { SimulationConfigNew } from '../types'
 
 const ARBSYS = '0x0000000000000000000000000000000000000064'
 
+// from https://github.com/ArbitrumFoundation/governance/blob/14d5f91ba58eec6270a3b3daebf3de170cb2685f/scripts/proposals/AIP4/data/42161-AIP4-data.json
 const aip4 = {
   arbSysSendTxToL1Args: {
     l1Timelock: '0xE6841D92B0C345144506576eC13ECf5103aC7f49',
