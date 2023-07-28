@@ -6,7 +6,6 @@ import { SimulationConfigNew } from '../types'
 
 const ARBSYS = '0x0000000000000000000000000000000000000064'
 
-// from https://github.com/ArbitrumFoundation/governance/blob/07d3e88c71c3fde922721837f947cef2868e6d67/scripts/proposals/AIP12/data/42161-AIP1.2-data.json
 const aip4 = {
   actionChainID: 42161,
   actionAddress: '0x984194FfA74486e74A273372321b759fEF2C87ac',
