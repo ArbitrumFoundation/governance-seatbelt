@@ -1,5 +1,5 @@
 /**
- * @notice Simulation configuration file for AIP 1.2
+ * @notice Simulation configuration file for AIP 7
  */
 import { ethers } from 'ethers'
 import { SimulationConfigNew } from '../types'
@@ -37,5 +37,5 @@ export const config: SimulationConfigNew = {
   values: [call1.value], // Array of values with each call.
   signatures: [call1.signature], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
   calldatas: [call1.calldata], // Array of encoded calldatas.
-  description: 'AIP4 Simulation',
+  description: 'AIP7 Simulation',
 }
