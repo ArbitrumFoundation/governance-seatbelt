@@ -187,12 +187,21 @@ async function main() {
     // assume we're simulating all by default
     const states = await Promise.all(proposalIds.map((id) => governor.state(id)))
     const simProposals: { id: BigNumber; simType: SimulationConfigBase['type'] }[] = proposalIds.map((id, i) => {
+      const state = String(states[i]) as keyof typeof PROPOSAL_STATES
+      const proposalState = PROPOSAL_STATES[state]
+      return { id, proposalState}
+    }).filter(p => {
+      return !process.env.ONLY_PENDING ||
+              p.proposalState === 'Pending' || 
+              p.proposalState === 'Active' || 
+              p.proposalState === 'Queued' || 
+              p.proposalState === 'Succeeded'
+    }).map(p => {
       // If state is `Executed` (state 7), we use the executed sim type and effectively just
       // simulate the real transaction. For all other states, we use the `proposed` type because
       // state overrides are required to simulate the transaction
-      const state = String(states[i]) as keyof typeof PROPOSAL_STATES
-      const isExecuted = PROPOSAL_STATES[state] === 'Executed'
-      return { id, simType: isExecuted ? 'executed' : 'proposed' }
+      const isExecuted = p.proposalState === 'Executed'
+      return { id: p.id, simType: isExecuted ? 'executed' : 'proposed' }
     })
     const simProposalsIds = simProposals.map((sim) => sim.id)
 
