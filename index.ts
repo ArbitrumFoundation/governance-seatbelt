@@ -60,7 +60,7 @@ async function simL2toL1(sr: SimulationResult, simname: string) {
       values: [l2ToL1TxEvent.callvalue], // Array of values with each call.
       signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
       calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
-      description: 'The is the L1 Timelock Execution of simulation ' + parentId.toHexString(),
+      description: '# The is the L1 Timelock Execution of simulation ' + parentId.toHexString(),
       parentId: parentId.div(10000000).add(1).mul(10000000),
       idoffset: offset,
     }
@@ -119,7 +119,7 @@ async function simRetryable(sr: SimulationResult, simname: string) {
         values: [parsedRetryable.l2CallValue], // Array of values with each call.
         signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
         calldatas: [parsedRetryable.data], // Array of encoded calldatas.
-        description: 'The is the L2 Retryable Execution of simulation ' + parentId.toHexString(),
+        description: '# The is the L2 Retryable Execution of simulation ' + parentId.toHexString(),
         parentId: parentId,
         idoffset: offset,
       }
