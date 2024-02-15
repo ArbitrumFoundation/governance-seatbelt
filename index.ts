@@ -61,7 +61,7 @@ async function simL2toL1(sr: SimulationResult, simname: string) {
       signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
       calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
       description: 'The is the L1 Timelock Execution of simulation ' + parentId.toHexString(),
-      parentId: parentId.div(10000000).mul(10000000),
+      parentId: parentId.div(10000000).add(1).mul(10000000),
       idoffset: offset,
     }
     offset += 1000000 // reserve spaces for retryable exections
