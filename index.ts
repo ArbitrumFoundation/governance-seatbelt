@@ -61,7 +61,7 @@ async function simL2toL1(sr: SimulationResult, simname: string) {
       signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
       calldatas: [l2ToL1TxEvent.data], // Array of encoded calldatas.
       description: 'The is the L1 Timelock Execution of simulation ' + parentId.toHexString(),
-      parentId: parentId,
+      parentId: parentId.div(10000000).mul(10000000),
       idoffset: offset,
     }
     offset += 1000000 // reserve spaces for retryable exections
@@ -218,7 +218,7 @@ async function main() {
     for (const simProposal of simProposals) {
       if (simProposal.simType === 'new') throw new Error('Simulation type "new" is not supported in this branch')
       // Determine if this proposal is already `executed` or currently in-progress (`proposed`)
-      console.log(`  Simulating ${DAO_NAME} proposal ${simProposal.id}...`)
+      console.log(`  Simulating ${DAO_NAME} proposal ${simProposal.id} ...`)
       const config: SimulationConfig = {
         type: simProposal.simType,
         daoName: DAO_NAME,
@@ -253,7 +253,7 @@ async function main() {
   for (const simOutput of simOutputs) {
     // Run checks
     const { sim, proposal, latestBlock, config } = simOutput
-    console.log(`  Running for proposal ID ${formatProposalId(governorType, proposal.id!)}...`)
+    console.log(`  Running for proposal ID ${formatProposalId(governorType, proposal.id!)} ...`)
     const checkResults: AllCheckResults = Object.fromEntries(
       await Promise.all(
         Object.keys(ALL_CHECKS).map(async (checkId) => [
