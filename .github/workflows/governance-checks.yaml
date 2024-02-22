@@ -74,6 +74,9 @@ jobs:
           DAO_NAME: ${{ matrix.DAO_NAME }}
           GOVERNOR_ADDRESS: ${{ matrix.GOVERNOR_ADDRESS }}
           ONLY_RELEVANT: ${{ matrix.ONLY_RELEVANT }}
+      
+      - name: List reports
+        run: find reports/${{ matrix.DAO_NAME }}/${{ matrix.GOVERNOR_ADDRESS }}/
 
       - name: Upload artifacts
         # We always upload artifacts, even if certain proposal sims/checks failed. This is because
