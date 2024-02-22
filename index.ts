@@ -4,7 +4,7 @@
 
 import dotenv from 'dotenv'
 dotenv.config()
-import { BigNumber, BigNumberish, Contract } from 'ethers'
+import { BigNumber, BigNumberish, Contract, constants } from 'ethers'
 import { DAO_NAME, GOVERNOR_ADDRESS, SIM_NAME } from './utils/constants'
 import { arb1provider, l1provider, provider } from './utils/clients/ethers'
 import { simulate } from './utils/clients/tenderly'
@@ -55,7 +55,7 @@ async function simL2toL1(sr: SimulationResult, simname: string) {
       type: 'arbl2tol1',
       daoName: simname,
       governorType: 'arb',
-      governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
+      governorAddress: getAddress(GOVERNOR_ADDRESS || constants.AddressZero),
       targets: [l2ToL1TxEvent.destination], // Array of targets to call.
       values: [l2ToL1TxEvent.callvalue], // Array of values with each call.
       signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
@@ -114,7 +114,7 @@ async function simRetryable(sr: SimulationResult, simname: string) {
         from: bridgeMessageEvent.sender,
         daoName: simname,
         governorType: 'arb',
-        governorAddress: '0xf07ded9dc292157749b6fd268e37df6ea38395b9',
+        governorAddress: getAddress(GOVERNOR_ADDRESS || constants.AddressZero),
         targets: [parsedRetryable.destAddress], // Array of targets to call.
         values: [parsedRetryable.l2CallValue], // Array of values with each call.
         signatures: [''], // Array of function signatures. Leave empty if generating calldata with ethers like we do here.
