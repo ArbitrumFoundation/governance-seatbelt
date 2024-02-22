@@ -191,7 +191,7 @@ async function main() {
       const proposalState = PROPOSAL_STATES[state]
       return { id, proposalState}
     }).filter(p => {
-      return !process.env.ONLY_PENDING ||
+      return !process.env.ONLY_RELEVANT ||
               p.proposalState === 'Pending' || 
               p.proposalState === 'Active' || 
               p.proposalState === 'Queued' || 
