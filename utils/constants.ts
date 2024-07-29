@@ -5,8 +5,8 @@ dotenv.config()
 export const ETHERSCAN_API_KEY: string = process.env.ETHERSCAN_API_KEY!
 export const RPC_URL: string = process.env.RPC_URL!
 export const L1_RPC_URL: string = process.env.L1_RPC_URL!
-export const ARB1_RPC_URL: string = process.env.ARB1_RPC_URL!
-export const NOVA_RPC_URL: string = process.env.NOVA_RPC_URL!
+export const ARB1_RPC_URL: string = process.env.ARB1_RPC_URL ?? 'https://arb1.arbitrum.io/rpc'
+export const NOVA_RPC_URL: string = process.env.NOVA_RPC_URL ?? 'https://nova.arbitrum.io/rpc'
 export const TENDERLY_ACCESS_TOKEN: string = process.env.TENDERLY_ACCESS_TOKEN!
 export const TENDERLY_USER: string = process.env.TENDERLY_USER!
 export const TENDERLY_PROJECT_SLUG: string = process.env.TENDERLY_PROJECT_SLUG!
