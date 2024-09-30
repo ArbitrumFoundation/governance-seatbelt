@@ -68,6 +68,7 @@ jobs:
           RPC_URL: ${{ secrets.RPC_URL }}
           L1_RPC_URL: ${{ secrets.L1_RPC_URL }}
           ARB1_RPC_URL: ${{ secrets.ARB1_RPC_URL }}
+          NOVA_RPC_URL: ${{ secrets.NOVA_RPC_URL }}
           TENDERLY_ACCESS_TOKEN: ${{ secrets.TENDERLY_ACCESS_TOKEN }}
           TENDERLY_USER: ${{ secrets.TENDERLY_USER }}
           TENDERLY_PROJECT_SLUG: ${{ secrets.TENDERLY_PROJECT_SLUG }}
