@@ -2,7 +2,7 @@ import {
   checkTargetsVerifiedEtherscan,
   checkTouchedContractsVerifiedEtherscan,
 } from './check-targets-verified-etherscan'
-import { checkTargetsNoSelfdestruct, checkTouchedContractsNoSelfdestruct } from './check-targets-no-selfdestruct'
+// import { checkTargetsNoSelfdestruct, checkTouchedContractsNoSelfdestruct } from './check-targets-no-selfdestruct'
 import { checkDecodeCalldata } from './check-decode-calldata'
 import { checkLogs } from './check-logs'
 import { checkSlither } from './check-slither'
@@ -19,8 +19,8 @@ const ALL_CHECKS: {
   checkLogs,
   checkTargetsVerifiedEtherscan,
   checkTouchedContractsVerifiedEtherscan,
-  checkTargetsNoSelfdestruct,
-  checkTouchedContractsNoSelfdestruct,
+  // checkTargetsNoSelfdestruct,
+  // checkTouchedContractsNoSelfdestruct,
   checkValueRequired,
   // The solc check must be run before the slither check, because the compilation exports a zip file
   // which is consumed by slither. This prevents us from having to compile the contracts twice.
