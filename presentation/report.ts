@@ -177,7 +177,8 @@ export async function generateAndSaveReports(
   await Promise.all([
     fsp.writeFile(`${htmlpath}.html`, htmlReport),
     fsp.writeFile(`${mdpath}.md`, markdownReport),
-    mdToPdf({ content: markdownReport }, { dest: `${pdfpath}.pdf` }),
+    // PDF Reports are disabled due to an issue with puppeteer
+    // mdToPdf({ content: markdownReport }, { dest: `${pdfpath}.pdf` }),
   ])
 }
 
