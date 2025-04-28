@@ -737,6 +737,15 @@ async function simulateArbitrumRetryable(config: SimulationConfigArbRetryable): 
 
   const simTimestamp = BigNumber.from(latestBlock.timestamp + 1)
 
+
+  const proxySlot = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+  // Arb1 UE Proxy 0xCF57572261c7c2BCF21ffD220ea7d1a27D40A827
+  // Nova UE Proxy 0x86a02dD71363c440b21F4c0E5B2Ad01Ffe1A7482
+  const upgradeExecutorProxy = chainId === 42161 ? '0xCF57572261c7c2BCF21ffD220ea7d1a27D40A827' : '0x86a02dD71363c440b21F4c0E5B2Ad01Ffe1A7482'
+  // Arb1 UE New Logic: 0x12B1389Fbf261E781bdc3094d28636Abfb03C5b3
+  // Nova UE New Logic: 0xebb11Bbd7d72165FaC86bb5AB1B07A602540b286
+  const newLogic = chainId === 42161 ? '0x12B1389Fbf261E781bdc3094d28636Abfb03C5b3' : '0xebb11Bbd7d72165FaC86bb5AB1B07A602540b286'
+
   const simulationPayload: TenderlyPayload = {
     network_id: chainId === 42161 ? '42161' : '42170',
     // this field represents the block state to simulate against, so we use the latest block number
@@ -759,6 +768,11 @@ async function simulateArbitrumRetryable(config: SimulationConfigArbRetryable): 
       // Since gas price is zero, the sender needs no balance.
       // TODO Support sending ETH in local simulations like we do below in `simulateProposed`.
       [from]: { balance: '0' },
+      [upgradeExecutorProxy]: {
+        storage: {
+          [proxySlot]: defaultAbiCoder.encode(['address'], [newLogic]),
+        }
+      }
     },
   }
   const sim = await sendSimulation(simulationPayload)
