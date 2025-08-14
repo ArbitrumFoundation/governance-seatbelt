@@ -177,7 +177,7 @@ export async function generateAndSaveReports(
   await Promise.all([
     fsp.writeFile(`${htmlpath}.html`, htmlReport),
     fsp.writeFile(`${mdpath}.md`, markdownReport),
-    mdToPdf({ content: markdownReport }, { dest: `${pdfpath}.pdf` }),
+    // mdToPdf({ content: markdownReport }, { dest: `${pdfpath}.pdf` }),
   ])
 }
 
