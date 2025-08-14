@@ -7,7 +7,7 @@ import { SimulationConfigNew } from '../types'
 const ARBSYS = '0x0000000000000000000000000000000000000064'
 
 
-// from https://github.com/ArbitrumFoundation/governance/blob/4d59e726e2836be325ca89928ca2d66308faefff/scripts/proposals/AIP7/data/42161-AIP7-data.json
+// from https://github.com/ArbitrumFoundation/governance/blob/47582832ceb69ae02e666ee645f092ff6318c314/scripts/proposals/OmnibusAug25/data.json
 const aip4 = {
   arbSysSendTxToL1Args: {
     l1Timelock: '0xE6841D92B0C345144506576eC13ECf5103aC7f49',
