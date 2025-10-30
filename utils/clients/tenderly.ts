@@ -402,6 +402,7 @@ async function simulateProposed(config: SimulationConfigProposed): Promise<Simul
       [`${proposalVotesKey}.forVotes`]: votingTokenSupply.toString(),
       [`${proposalVotesKey}.againstVotes`]: '0',
       [`${proposalVotesKey}.abstainVotes`]: '0',
+      [`_extendedDeadlines[${proposalIdBn.toString()}]._deadline`]: '1',
     }
   } else {
     throw new Error(`Cannot generate overrides for unknown governor type: ${governorType}`)
