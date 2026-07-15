@@ -796,11 +796,11 @@ export function getContractName(contract: TenderlyContract | undefined, defaultN
  */
 async function getLatestBlock(chainId: BigNumberish): Promise<number> {
   try {
-    // Send simulation request
-    const url = `${TENDERLY_BASE_URL}/network/${BigNumber.from(chainId).toString()}/block-number`
-    const fetchOptions = <Partial<FETCH_OPT>>{ method: 'GET', ...TENDERLY_FETCH_OPTIONS }
-    const res = await fetchUrl(url, fetchOptions)
-    return res.block_number as number
+    // The legacy Tenderly `/network/{chainId}/block-number` gateway endpoint was removed
+    // (returns 404), so read the latest block from the chain's RPC provider instead.
+    const id = BigNumber.from(chainId).toNumber()
+    const chainProvider = id === 1 ? l1provider : id === 42170 ? novaprovider : arb1provider
+    return await chainProvider.getBlockNumber()
   } catch (err) {
     console.log('logging getLatestBlock error')
     console.log(JSON.stringify(err, null, 2))
