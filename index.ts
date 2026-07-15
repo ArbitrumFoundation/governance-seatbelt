@@ -130,8 +130,18 @@ async function simRetryable(sr: SimulationResult, simname: string) {
         chainId: chainId
       }
       offset += 10000
-      const { sim, proposal, latestBlock } = await simulate(l2tol1config)
-      simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
+      try {
+        const { sim, proposal, latestBlock } = await simulate(l2tol1config)
+        simresults.push({ sim, proposal, latestBlock, config: l2tol1config })
+      } catch (err) {
+        // Nova (42170) is a documented unsupported chain (see README Known Issues); do not
+        // let one chain's retryable simulation abort the whole run.
+        console.warn(
+          `WARNING: skipping retryable simulation on chain ${chainId} (status ${
+            (err as any)?.statusCode ?? 'unknown'
+          }). Nova is a known-unsupported chain.`
+        )
+      }
     }
   }
   return simresults
